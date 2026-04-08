@@ -1,0 +1,825 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>⚡ Chennai Electricity — Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Playfair+Display:ital,wght@1,400;1,700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+
+/* ── THEME VARIABLES ── */
+[data-theme="dark"]{
+  --bg:#080b10;--s1:#0e1420;--s2:#141c2a;--s3:#1a2235;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.12);
+  --text:#eceae2;--muted:#4e5a6e;--muted2:#7a8698;
+  --card-bg:#0e1420;--hover-bg:#141c2a;
+  --y:#f4be45;--g:#2dd4a0;--b:#5bb8f5;--r:#f06470;--p:#a78bfa;
+  --shadow:0 4px 24px rgba(0,0,0,0.4);
+  --gc:rgba(255,255,255,0.05);--tc:#4e5a6e;
+}
+[data-theme="light"]{
+  --bg:#f0f2f5;--s1:#ffffff;--s2:#f8f9fb;--s3:#eef0f4;
+  --border:rgba(0,0,0,0.08);--border2:rgba(0,0,0,0.15);
+  --text:#1a1f2e;--muted:#9aa3b2;--muted2:#5a6478;
+  --card-bg:#ffffff;--hover-bg:#f8f9fb;
+  --y:#d4960a;--g:#0f9b72;--b:#1a7fc4;--r:#d63346;--p:#7c5cca;
+  --shadow:0 2px 16px rgba(0,0,0,0.08);
+  --gc:rgba(0,0,0,0.06);--tc:#9aa3b2;
+}
+
+html,body{height:100%;overflow:hidden;font-family:'Syne',sans-serif;transition:background 0.3s}
+body{background:var(--bg);color:var(--text)}
+
+/* ── APP SHELL ── */
+#app{display:grid;grid-template-columns:228px 1fr;height:100vh}
+
+/* ── SIDEBAR ── */
+#sidebar{
+  background:var(--s1);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;z-index:10;
+  transition:background 0.3s,border-color 0.3s;
+}
+.sb-logo{padding:1.4rem 1.4rem 1rem;border-bottom:1px solid var(--border)}
+.logo-mark{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.logo-bolt{width:32px;height:32px;background:var(--y);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;transition:background 0.3s}
+.logo-name{font-size:15px;font-weight:800;letter-spacing:0.04em;color:var(--text)}
+.logo-sub{font-size:10px;color:var(--muted);font-family:'JetBrains Mono',monospace;letter-spacing:0.06em}
+.sb-section{padding:1.1rem 1rem 0.4rem;font-size:9px;font-weight:700;letter-spacing:0.18em;text-transform:uppercase;color:var(--muted)}
+.sb-item{
+  display:flex;align-items:center;gap:10px;
+  padding:0.6rem 1rem 0.6rem 1.2rem;margin:0 0.5rem;
+  border-radius:8px;cursor:pointer;transition:all 0.18s;border:1px solid transparent;
+}
+.sb-item:hover{background:var(--hover-bg);border-color:var(--border)}
+.sb-item.active{background:rgba(244,190,69,0.1);border-color:rgba(244,190,69,0.25)}
+[data-theme="light"] .sb-item.active{background:rgba(212,150,10,0.08);border-color:rgba(212,150,10,0.3)}
+.sb-item.active::before{content:'';position:absolute;left:0.5rem;width:2px;height:60%;background:var(--y);border-radius:2px}
+.sb-item{position:relative}
+.sb-icon{font-size:15px;width:22px;text-align:center;flex-shrink:0}
+.sb-label{font-size:12px;font-weight:700;color:var(--muted2);flex:1}
+.sb-item.active .sb-label,.sb-item.active .sb-icon{color:var(--y)}
+.sb-badge{font-size:9px;font-family:'JetBrains Mono',monospace;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,0.05);color:var(--muted)}
+[data-theme="light"] .sb-badge{background:rgba(0,0,0,0.05)}
+.sb-item.active .sb-badge{background:rgba(244,190,69,0.15);color:var(--y)}
+[data-theme="light"] .sb-item.active .sb-badge{background:rgba(212,150,10,0.12);color:var(--y)}
+.sb-bottom{margin-top:auto;padding:1rem;border-top:1px solid var(--border)}
+.sb-stat{display:flex;justify-content:space-between;padding:0.35rem 0;font-size:11px}
+.sb-stat-label{color:var(--muted);font-family:'JetBrains Mono',monospace}
+.sb-stat-val{color:var(--text);font-weight:700;font-family:'JetBrains Mono',monospace}
+
+/* ── MAIN ── */
+#main{display:flex;flex-direction:column;overflow:hidden;background:var(--bg);transition:background 0.3s}
+
+/* ── TOPBAR ── */
+#topbar{
+  height:52px;flex-shrink:0;
+  background:var(--s1);border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 2rem;z-index:5;transition:background 0.3s,border-color 0.3s;
+  box-shadow:var(--shadow);
+}
+.tb-breadcrumb{display:flex;align-items:center;gap:8px;font-size:12px}
+.tb-bc-root{color:var(--muted);font-weight:600}
+.tb-bc-sep{color:var(--muted);opacity:0.5}
+.tb-bc-cur{color:var(--text);font-weight:800}
+.tb-right{display:flex;align-items:center;gap:12px}
+.tb-city{font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:600;padding:4px 12px;border-radius:20px;background:rgba(45,212,160,0.1);border:1px solid rgba(45,212,160,0.25);color:var(--g)}
+[data-theme="light"] .tb-city{background:rgba(15,155,114,0.08);border-color:rgba(15,155,114,0.25);color:var(--g)}
+.tb-time{font-size:11px;font-family:'JetBrains Mono',monospace;color:var(--muted)}
+.tb-pages{display:flex;gap:4px}
+.tb-dot{width:6px;height:6px;border-radius:50%;background:var(--border2);cursor:pointer;transition:all 0.2s}
+.tb-dot.active{background:var(--y);width:18px;border-radius:3px}
+
+/* THEME TOGGLE */
+.theme-toggle{
+  display:flex;align-items:center;gap:6px;
+  background:var(--s2);border:1px solid var(--border2);
+  border-radius:20px;padding:4px 8px;cursor:pointer;
+  font-size:11px;font-weight:700;color:var(--muted2);
+  transition:all 0.2s;user-select:none;
+}
+.theme-toggle:hover{border-color:var(--y);color:var(--y)}
+.tt-track{width:28px;height:16px;background:var(--border2);border-radius:8px;position:relative;transition:background 0.3s}
+[data-theme="light"] .tt-track{background:var(--y)}
+.tt-thumb{position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--muted2);transition:all 0.3s}
+[data-theme="light"] .tt-thumb{left:14px;background:#fff}
+
+/* ── PAGES ── */
+#pages{flex:1;position:relative;overflow:hidden}
+.page{
+  position:absolute;inset:0;overflow-y:auto;overflow-x:hidden;
+  padding:1.75rem 2rem;opacity:0;pointer-events:none;
+  transition:opacity 0.3s,transform 0.3s;transform:translateY(10px);
+}
+.page.active{opacity:1;pointer-events:all;transform:translateY(0)}
+.page::-webkit-scrollbar{width:4px}
+.page::-webkit-scrollbar-track{background:transparent}
+.page::-webkit-scrollbar-thumb{background:var(--border2);border-radius:2px}
+
+/* ── PAGE HEADER ── */
+.pg-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.5rem;flex-wrap:wrap;gap:1rem}
+.pg-eyebrow{font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:500;letter-spacing:0.14em;text-transform:uppercase;color:var(--y);margin-bottom:0.35rem}
+.pg-title{font-size:clamp(1.6rem,3vw,2.3rem);font-weight:800;letter-spacing:-0.01em;line-height:1.1}
+.pg-title em{font-family:'Playfair Display',serif;font-style:italic;font-weight:400;color:var(--y)}
+.pg-desc{font-size:12px;color:var(--muted2);margin-top:0.4rem;font-weight:500;line-height:1.7;max-width:520px}
+.pg-meta{display:flex;gap:0.6rem;flex-wrap:wrap;align-items:flex-start}
+.pg-tag{font-size:10px;font-family:'JetBrains Mono',monospace;padding:4px 10px;border-radius:6px;border:1px solid var(--border2);color:var(--muted2)}
+
+/* ── METRIC STRIP ── */
+.metric-strip{display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;margin-bottom:1.5rem}
+.mc{
+  background:var(--card-bg);border:1px solid var(--border);border-radius:12px;
+  padding:1rem 1.2rem;transition:border-color 0.2s,transform 0.2s,box-shadow 0.2s;
+  position:relative;overflow:hidden;box-shadow:var(--shadow);
+}
+.mc:hover{border-color:var(--border2);transform:translateY(-2px);box-shadow:var(--shadow)}
+.mc-label{font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:500;letter-spacing:0.08em;text-transform:uppercase;color:var(--muted);margin-bottom:0.45rem;display:flex;align-items:center;gap:6px}
+.mc-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.mc-val{font-size:1.85rem;font-weight:800;line-height:1;margin-bottom:0.2rem}
+.mc-sub{font-size:11px;color:var(--muted2);font-weight:500}
+.mc-delta{font-size:11px;font-family:'JetBrains Mono',monospace;font-weight:700;margin-top:3px}
+.delta-up{color:var(--r)} .delta-down{color:var(--g)}
+
+/* ── CARDS ── */
+.card{
+  background:var(--card-bg);border:1px solid var(--border);border-radius:14px;
+  padding:1.4rem;transition:border-color 0.2s,box-shadow 0.2s;box-shadow:var(--shadow);
+}
+.card:hover{border-color:var(--border2)}
+.card-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:1.2rem}
+.card-title{font-size:13px;font-weight:800;letter-spacing:0.02em;color:var(--text)}
+.card-sub{font-size:11px;color:var(--muted2);font-weight:500;margin-top:3px}
+.card-badge{font-size:10px;font-family:'JetBrains Mono',monospace;padding:3px 10px;border-radius:20px}
+.badge-y{background:rgba(244,190,69,0.12);color:var(--y);border:1px solid rgba(244,190,69,0.2)}
+.badge-g{background:rgba(45,212,160,0.1);color:var(--g);border:1px solid rgba(45,212,160,0.2)}
+.badge-b{background:rgba(91,184,245,0.1);color:var(--b);border:1px solid rgba(91,184,245,0.2)}
+.badge-r{background:rgba(240,100,112,0.1);color:var(--r);border:1px solid rgba(240,100,112,0.2)}
+.badge-p{background:rgba(167,139,250,0.1);color:var(--p);border:1px solid rgba(167,139,250,0.2)}
+[data-theme="light"] .badge-y{background:rgba(212,150,10,0.08);color:var(--y);border-color:rgba(212,150,10,0.2)}
+[data-theme="light"] .badge-g{background:rgba(15,155,114,0.08);color:var(--g);border-color:rgba(15,155,114,0.2)}
+[data-theme="light"] .badge-b{background:rgba(26,127,196,0.08);color:var(--b);border-color:rgba(26,127,196,0.2)}
+[data-theme="light"] .badge-r{background:rgba(214,51,70,0.08);color:var(--r);border-color:rgba(214,51,70,0.2)}
+.cw{position:relative;width:100%}
+
+/* ── GRIDS ── */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:1.2rem}
+.g3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.2rem}
+.g12{display:grid;grid-template-columns:1fr 2fr;gap:1.2rem}
+.g21{display:grid;grid-template-columns:2fr 1fr;gap:1.2rem}
+.span2{grid-column:span 2}
+
+/* ── INSIGHT PILLS ── */
+.insight-row{display:flex;gap:0.6rem;flex-wrap:wrap;margin-bottom:1.5rem}
+.ins-pill{display:flex;align-items:center;gap:8px;padding:0.5rem 0.9rem;border-radius:10px;border:1px solid var(--border);background:var(--s2);font-size:11px;font-weight:700;color:var(--text)}
+.ins-pill .dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+
+/* ── TABLE ── */
+.dt{width:100%;border-collapse:collapse;font-size:12px}
+.dt thead tr{border-bottom:1px solid var(--border2)}
+.dt th{text-align:left;padding:0.55rem 0.9rem;font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:600;letter-spacing:0.1em;text-transform:uppercase;color:var(--muted)}
+.dt td{padding:0.65rem 0.9rem;color:var(--muted2);border-bottom:1px solid var(--border);font-weight:500}
+.dt tbody tr:hover td{background:var(--hover-bg);color:var(--text)}
+.dt tbody tr:last-child td{border-bottom:none}
+.bar-cell{display:flex;align-items:center;gap:8px}
+.inline-bar{flex:1;height:4px;background:var(--border2);border-radius:2px;overflow:hidden}
+.ib-fill{height:100%;border-radius:2px}
+
+/* ── HEATMAP ── */
+.heatmap-grid{display:grid;grid-template-columns:72px repeat(14,1fr);gap:3px;align-items:center}
+.hm-cell{height:30px;border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:9px;font-family:'JetBrains Mono',monospace;font-weight:600;transition:transform 0.15s,box-shadow 0.15s;cursor:default}
+.hm-cell:hover{transform:scale(1.18);z-index:2;position:relative;box-shadow:0 2px 8px rgba(0,0,0,0.3)}
+.hm-label{font-size:10px;font-family:'JetBrains Mono',monospace;color:var(--muted);text-align:right;padding-right:8px}
+.hm-header{font-size:8px;font-family:'JetBrains Mono',monospace;color:var(--muted);text-align:center;line-height:1.3}
+
+/* ── FEAT BARS ── */
+.feat-list{display:flex;flex-direction:column;gap:1rem}
+.fi{display:flex;flex-direction:column;gap:5px}
+.fi-top{display:flex;justify-content:space-between;align-items:baseline}
+.fi-name{font-size:12px;font-weight:700;color:var(--text)}
+.fi-val{font-size:13px;font-family:'JetBrains Mono',monospace;font-weight:600}
+.fi-track{height:6px;background:var(--border2);border-radius:3px;overflow:hidden}
+.fi-fill{height:100%;border-radius:3px;width:0;transition:width 1.5s cubic-bezier(.4,0,.2,1)}
+
+/* ── SIMULATOR ── */
+.sim-form{display:flex;flex-direction:column;gap:1rem}
+.sf-group{background:var(--s2);border:1px solid var(--border);border-radius:10px;padding:1.2rem}
+.sf-title{font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:600;letter-spacing:0.12em;text-transform:uppercase;color:var(--g);margin-bottom:1rem}
+.sf-field{margin-bottom:0.85rem}
+.sf-field:last-child{margin-bottom:0}
+.sf-label{font-size:11px;font-weight:700;color:var(--muted2);margin-bottom:0.4rem;display:flex;justify-content:space-between}
+.sf-lval{font-family:'JetBrains Mono',monospace;color:var(--y);font-weight:600}
+select{width:100%;background:var(--s1);border:1px solid var(--border2);color:var(--text);font-family:'Syne',sans-serif;font-size:12px;font-weight:600;padding:8px 12px;border-radius:8px;outline:none;appearance:none;cursor:pointer;transition:border-color 0.2s}
+select:focus{border-color:var(--y)}
+input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:4px;background:var(--border2);border-radius:2px;outline:none;cursor:pointer;transition:background 0.3s}
+input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:16px;border-radius:50%;background:var(--y);cursor:pointer;box-shadow:0 0 8px rgba(244,190,69,0.4)}
+.result-display{background:var(--s2);border:1px solid var(--border);border-radius:14px;padding:2rem;text-align:center;position:sticky;top:0;box-shadow:var(--shadow)}
+.rd-label{font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:600;letter-spacing:0.14em;text-transform:uppercase;color:var(--muted);margin-bottom:0.5rem}
+.rd-val{font-size:5rem;font-weight:800;color:var(--y);line-height:1;transition:all 0.35s;margin-bottom:0.25rem}
+.rd-unit{font-size:12px;font-weight:600;color:var(--muted2);margin-bottom:1.4rem}
+.rd-bar-wrap{height:6px;background:var(--border2);border-radius:3px;overflow:hidden;margin-bottom:1.4rem}
+.rd-bar{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--g),var(--y));transition:width 0.5s cubic-bezier(.4,0,.2,1)}
+.rd-rows{display:flex;flex-direction:column;gap:0.55rem;text-align:left}
+.rd-row{display:flex;justify-content:space-between;padding:0.55rem 0.85rem;background:var(--s1);border-radius:7px;font-size:12px;border:1px solid var(--border)}
+.rd-row-label{color:var(--muted2);font-weight:600}
+.rd-row-val{color:var(--text);font-weight:700;font-family:'JetBrains Mono',monospace}
+.rd-tier{margin-top:1rem;padding:0.65rem;border-radius:8px;font-size:11px;font-weight:700;letter-spacing:0.04em}
+
+/* ── ANIMATIONS ── */
+@keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+.page.active .pg-header{animation:fadeUp 0.35s ease}
+.page.active .metric-strip{animation:fadeUp 0.35s 0.07s ease both}
+.page.active .insight-row{animation:fadeUp 0.35s 0.11s ease both}
+.page.active .g2,.page.active .g3,.page.active .g12,.page.active .g21{animation:fadeUp 0.35s 0.15s ease both}
+
+@media(max-width:900px){
+  #app{grid-template-columns:1fr}
+  #sidebar{display:none}
+  .metric-strip{grid-template-columns:1fr 1fr}
+  .g2,.g3,.g12,.g21{grid-template-columns:1fr}
+  .span2{grid-column:span 1}
+  .page{padding:1.2rem}
+}
+</style>
+</head>
+<body>
+<div id="app">
+
+<!-- SIDEBAR -->
+<aside id="sidebar">
+  <div class="sb-logo">
+    <div class="logo-mark">
+      <div class="logo-bolt">⚡</div>
+      <div class="logo-name">Chennai EDS</div>
+    </div>
+    <div class="logo-sub">Electricity · Jan 2025–Feb 2026</div>
+  </div>
+  <div class="sb-section">Analysis Pages</div>
+  <div class="sb-item active" onclick="goTo(0)"><div class="sb-icon">🏠</div><div class="sb-label">Overview</div><div class="sb-badge">KPIs</div></div>
+  <div class="sb-item" onclick="goTo(1)"><div class="sb-icon">📅</div><div class="sb-label">Seasonal Trends</div><div class="sb-badge">14 mo</div></div>
+  <div class="sb-item" onclick="goTo(2)"><div class="sb-icon">💰</div><div class="sb-label">Income Analysis</div><div class="sb-badge">3 tiers</div></div>
+  <div class="sb-item" onclick="goTo(3)"><div class="sb-icon">📆</div><div class="sb-label">Weekly Patterns</div><div class="sb-badge">7 days</div></div>
+  <div class="sb-item" onclick="goTo(4)"><div class="sb-icon">🗺️</div><div class="sb-label">Area & Housing</div><div class="sb-badge">10 areas</div></div>
+  <div class="sb-item" onclick="goTo(5)"><div class="sb-icon">🔮</div><div class="sb-label">Simulator</div><div class="sb-badge">live</div></div>
+  <div class="sb-section">Model</div>
+  <div class="sb-item" onclick="goTo(6)"><div class="sb-icon">🤖</div><div class="sb-label">ML Model</div><div class="sb-badge">R²=0.35</div></div>
+  <div class="sb-bottom">
+    <div class="sb-stat"><span class="sb-stat-label">City</span><span class="sb-stat-val">Chennai</span></div>
+    <div class="sb-stat"><span class="sb-stat-label">Records</span><span class="sb-stat-val">63,600</span></div>
+    <div class="sb-stat"><span class="sb-stat-label">Households</span><span class="sb-stat-val">150</span></div>
+    <div class="sb-stat"><span class="sb-stat-label">Period</span><span class="sb-stat-val">Jan25–Feb26</span></div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<div id="main">
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="tb-breadcrumb">
+      <span class="tb-bc-root">Chennai EDS</span>
+      <span class="tb-bc-sep">/</span>
+      <span class="tb-bc-cur" id="tb-cur">Overview</span>
+    </div>
+    <div class="tb-right">
+      <div class="tb-pages" id="tb-dots"></div>
+      <div class="tb-city">📍 Chennai, TN</div>
+      <div class="theme-toggle" onclick="toggleTheme()" title="Toggle dark/light mode">
+        <span id="tt-icon">🌙</span>
+        <div class="tt-track"><div class="tt-thumb"></div></div>
+        <span id="tt-label" style="font-size:10px">Dark</span>
+      </div>
+      <div class="tb-time" id="tb-clock"></div>
+    </div>
+  </div>
+
+  <div id="pages">
+
+    <!-- PAGE 0: OVERVIEW -->
+    <div class="page active" id="p0">
+      <div class="pg-header">
+        <div class="pg-title-row">
+          <div class="pg-eyebrow">Dashboard — Chennai, Tamil Nadu</div>
+          <h1 class="pg-title">Electricity <em>Consumption</em> Patterns</h1>
+          <div class="pg-desc">Residential electricity study across 150 Chennai households — Jan 2025 to Feb 2026. Captures Chennai's intense summer peak (Mar–Jun) and cool NE-monsoon winter (Oct–Jan).</div>
+        </div>
+        <div class="pg-meta">
+          <span class="pg-tag">Jan 2025 – Feb 2026</span>
+          <span class="pg-tag">63,600 rows</span>
+          <span class="pg-tag">13 features</span>
+          <span class="pg-tag">10 areas</span>
+        </div>
+      </div>
+      <div class="metric-strip">
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--y)"></div>Avg Daily Usage</div><div class="mc-val" style="color:var(--y)">8.4<span style="font-size:1.1rem"> kWh</span></div><div class="mc-sub">all 150 households</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--r)"></div>Peak Month</div><div class="mc-val" style="color:var(--r)">11.7<span style="font-size:1.1rem"> kWh</span></div><div class="mc-sub">May 2025 — peak summer</div><div class="mc-delta delta-up">▲ +92% above Nov low</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--g)"></div>Weekend Uplift</div><div class="mc-val" style="color:var(--g)">+16<span style="font-size:1.1rem">%</span></div><div class="mc-sub">9.18 vs 7.90 kWh</div><div class="mc-delta delta-down">vs weekday average</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--b)"></div>Income Gap</div><div class="mc-val" style="color:var(--b)">4.4<span style="font-size:1.1rem">×</span></div><div class="mc-sub">High vs Low income</div><div class="mc-delta" style="color:var(--b)">14.2 vs 3.2 kWh</div></div>
+      </div>
+      <div class="insight-row">
+        <div class="ins-pill"><div class="dot" style="background:var(--r)"></div>Peak: March–June (Chennai summer + heavy AC)</div>
+        <div class="ins-pill"><div class="dot" style="background:var(--g)"></div>Low: October–January (NE monsoon cool season)</div>
+        <div class="ins-pill"><div class="dot" style="background:var(--y)"></div>High income uses 4.4× more than Low income</div>
+        <div class="ins-pill"><div class="dot" style="background:var(--b)"></div>Weekends +16% higher than weekdays</div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Monthly Trend — Jan 2025 to Feb 2026</div><div class="card-sub">Avg daily kWh across all 150 Chennai households</div></div><span class="card-badge badge-y">14 months</span></div>
+          <div class="cw" style="height:230px"><canvas id="ov-monthly"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Consumption by Income Level</div><div class="card-sub">High income leads by 4.4× — driven by AC ownership</div></div><span class="card-badge badge-r">income</span></div>
+          <div class="cw" style="height:230px"><canvas id="ov-income"></canvas></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 1: SEASONAL -->
+    <div class="page" id="p1">
+      <div class="pg-header">
+        <div class="pg-title-row">
+          <div class="pg-eyebrow">Seasonal Analysis</div>
+          <h1 class="pg-title">Monthly <em>Trends</em></h1>
+          <div class="pg-desc">Chennai's climate drives a sharp summer spike (Mar–Jun, 38–42°C) and a cool winter dip (Oct–Jan, NE monsoon). May is the single hottest month for consumption.</div>
+        </div>
+        <div class="pg-meta"><span class="pg-tag">14 months</span><span class="pg-tag">Chennai climate</span></div>
+      </div>
+      <div class="metric-strip">
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--r)"></div>Peak Month</div><div class="mc-val" style="color:var(--r)">May</div><div class="mc-sub">11.65 kWh/day</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--g)"></div>Lowest Month</div><div class="mc-val" style="color:var(--g)">Nov</div><div class="mc-sub">6.06 kWh/day</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--y)"></div>Summer Avg</div><div class="mc-val" style="color:var(--y)">11.1<span style="font-size:1.1rem"> kWh</span></div><div class="mc-sub">Mar–Jun 2025</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--b)"></div>Cool Season Avg</div><div class="mc-val" style="color:var(--b)">6.2<span style="font-size:1.1rem"> kWh</span></div><div class="mc-sub">Oct 2025–Jan 2026</div></div>
+      </div>
+      <div class="g2" style="margin-bottom:1.2rem">
+        <div class="card span2">
+          <div class="card-header">
+            <div><div class="card-title">Monthly Consumption — All Income Groups (Jan 2025–Feb 2026)</div><div class="card-sub">Summer peak Mar–Jun clearly visible across all income tiers</div></div>
+            <span class="card-badge badge-y">multi-line</span>
+          </div>
+          <div class="cw" style="height:260px"><canvas id="s-multi"></canvas></div>
+          <div style="display:flex;gap:1.2rem;margin-top:1rem;flex-wrap:wrap">
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--muted2)"><span style="width:14px;height:3px;background:var(--y);display:inline-block;border-radius:2px"></span>All Households</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--muted2)"><span style="width:14px;height:3px;background:var(--r);display:inline-block;border-radius:2px"></span>High Income</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--muted2)"><span style="width:14px;height:3px;background:var(--b);display:inline-block;border-radius:2px"></span>Middle Income</span>
+            <span style="display:flex;align-items:center;gap:6px;font-size:11px;font-weight:700;color:var(--muted2)"><span style="width:14px;height:3px;background:var(--g);display:inline-block;border-radius:2px"></span>Low Income</span>
+          </div>
+        </div>
+      </div>
+      <div class="g2">
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Chennai Seasonal Summary</div><div class="card-sub">Summer vs Monsoon vs Post-Monsoon vs Cool</div></div><span class="card-badge badge-r">seasons</span></div>
+          <div class="cw" style="height:200px"><canvas id="s-season"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Monthly Rankings</div><div class="card-sub">All 14 months ranked by avg consumption</div></div><span class="card-badge badge-b">table</span></div>
+          <table class="dt" id="month-table"></table>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 2: INCOME -->
+    <div class="page" id="p2">
+      <div class="pg-header">
+        <div class="pg-title-row">
+          <div class="pg-eyebrow">Income Analysis</div>
+          <h1 class="pg-title">The Wealth <em>Gap</em></h1>
+          <div class="pg-desc">High-income Chennai households consume 4.4× more electricity. The gap widens dramatically during March–June when only middle and high-income homes run ACs.</div>
+        </div>
+        <div class="pg-meta"><span class="pg-tag">3 income tiers</span><span class="pg-tag">150 households</span></div>
+      </div>
+      <div class="metric-strip">
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--r)"></div>High Income</div><div class="mc-val" style="color:var(--r)">14.2<span style="font-size:1.1rem"> kWh</span></div><div class="mc-sub">53 households</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--b)"></div>Middle Income</div><div class="mc-val" style="color:var(--b)">7.53<span style="font-size:1.1rem"> kWh</span></div><div class="mc-sub">42 households</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--g)"></div>Low Income</div><div class="mc-val" style="color:var(--g)">3.21<span style="font-size:1.1rem"> kWh</span></div><div class="mc-sub">55 households</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--y)"></div>Gap Ratio</div><div class="mc-val" style="color:var(--y)">4.4<span style="font-size:1.1rem">×</span></div><div class="mc-sub">High ÷ Low</div></div>
+      </div>
+      <div class="g21" style="margin-bottom:1.2rem">
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Income Level vs Monthly Consumption</div><div class="card-sub">Summer gap is widest — AC is the key differentiator</div></div><span class="card-badge badge-r">grouped bar</span></div>
+          <div class="cw" style="height:260px"><canvas id="i-monthly"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Appliance Ownership</div><div class="card-sub">What each income group owns in Chennai</div></div></div>
+          <div style="display:flex;flex-direction:column;gap:0.7rem;margin-top:0.5rem" id="appliance-list"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Income Gap Over Time — High minus Low (kWh)</div><div class="card-sub">The gap is widest in May (peak summer) and narrowest in winter</div></div><span class="card-badge badge-y">area</span></div>
+        <div class="cw" style="height:170px"><canvas id="i-gap"></canvas></div>
+      </div>
+    </div>
+
+    <!-- PAGE 3: WEEKLY -->
+    <div class="page" id="p3">
+      <div class="pg-header">
+        <div class="pg-title-row">
+          <div class="pg-eyebrow">Weekly Patterns</div>
+          <h1 class="pg-title">Weekend <em>Effect</em></h1>
+          <div class="pg-desc">Saturdays and Sundays see a 16% surge in consumption as Chennai residents spend more time at home running ACs, TVs, and cooking appliances throughout the day.</div>
+        </div>
+        <div class="pg-meta"><span class="pg-tag">7 days</span><span class="pg-tag">weekday vs weekend</span></div>
+      </div>
+      <div class="metric-strip">
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--b)"></div>Weekday Avg</div><div class="mc-val" style="color:var(--b)">7.90<span style="font-size:1.1rem"> kWh</span></div><div class="mc-sub">Mon–Fri</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--y)"></div>Weekend Avg</div><div class="mc-val" style="color:var(--y)">9.18<span style="font-size:1.1rem"> kWh</span></div><div class="mc-sub">Sat–Sun</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--r)"></div>Peak Day</div><div class="mc-val" style="color:var(--r)">Sat</div><div class="mc-sub">highest single day</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--g)"></div>Uplift</div><div class="mc-val" style="color:var(--g)">+16<span style="font-size:1.1rem">%</span></div><div class="mc-sub">weekend vs weekday</div></div>
+      </div>
+      <div class="g2" style="margin-bottom:1.2rem">
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Avg Consumption by Day of Week</div><div class="card-sub">Saturday and Sunday highlighted in yellow</div></div><span class="card-badge badge-y">bar</span></div>
+          <div class="cw" style="height:240px"><canvas id="w-days"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Weekend Effect by Income Group</div><div class="card-sub">High income shows the largest absolute weekend jump</div></div><span class="card-badge badge-b">grouped</span></div>
+          <div class="cw" style="height:240px"><canvas id="w-split"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Heatmap — Day × Month (Jan 2025–Feb 2026)</div><div class="card-sub">Darker orange = higher consumption. Summer weekends are the hottest cells.</div></div><span class="card-badge badge-r">heatmap</span></div>
+        <div style="margin-top:0.75rem;overflow-x:auto" id="heatmap-container"></div>
+      </div>
+    </div>
+
+    <!-- PAGE 4: AREA & HOUSING -->
+    <div class="page" id="p4">
+      <div class="pg-header">
+        <div class="pg-title-row">
+          <div class="pg-eyebrow">Area & Housing Analysis</div>
+          <h1 class="pg-title">Where in <em>Chennai</em></h1>
+          <div class="pg-desc">Kodambakkam and Chromepet lead in consumption, while Porur is the most efficient area. Independent houses top all house types. 5-member homes use 2× more than single-person.</div>
+        </div>
+        <div class="pg-meta"><span class="pg-tag">10 Chennai areas</span><span class="pg-tag">4 house types</span><span class="pg-tag">1–6 members</span></div>
+      </div>
+      <div class="metric-strip">
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--r)"></div>Top Area</div><div class="mc-val" style="color:var(--r);font-size:1.3rem">Kodam-<br>bakkam</div><div class="mc-sub">10.59 kWh/day</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--g)"></div>Lowest Area</div><div class="mc-val" style="color:var(--g);font-size:1.3rem">Porur</div><div class="mc-sub">5.82 kWh/day</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--b)"></div>Top House Type</div><div class="mc-val" style="color:var(--b);font-size:1.4rem">Ind.</div><div class="mc-sub">Independent House</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--y)"></div>Peak by Size</div><div class="mc-val" style="color:var(--y)">5<span style="font-size:1.1rem"> members</span></div><div class="mc-sub">highest consumption</div></div>
+      </div>
+      <div class="g2" style="margin-bottom:1.2rem">
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Consumption by Chennai Area</div><div class="card-sub">Avg daily kWh — all 10 surveyed areas</div></div><span class="card-badge badge-b">horizontal</span></div>
+          <div class="cw" style="height:240px"><canvas id="h-areas"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Household Size vs Consumption</div><div class="card-sub">5-member homes use nearly 2× more than 1-member</div></div><span class="card-badge badge-y">bar+line</span></div>
+          <div class="cw" style="height:240px"><canvas id="h-members"></canvas></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">House Type × Income Level — Cross Analysis</div><div class="card-sub">Income dominates over house type in determining consumption</div></div><span class="card-badge badge-r">grouped bar</span></div>
+        <div class="cw" style="height:190px"><canvas id="h-cross"></canvas></div>
+      </div>
+    </div>
+
+    <!-- PAGE 5: SIMULATOR -->
+    <div class="page" id="p5">
+      <div class="pg-header">
+        <div class="pg-title-row">
+          <div class="pg-eyebrow">Prediction Simulator — Chennai</div>
+          <h1 class="pg-title">Estimate Your <em>Usage</em></h1>
+          <div class="pg-desc">Adjust your household parameters to predict daily electricity consumption based on Chennai climate patterns and our trained model factors.</div>
+        </div>
+      </div>
+      <div class="g12">
+        <div class="sim-form">
+          <div class="sf-group">
+            <div class="sf-title">Household Profile</div>
+            <div class="sf-field"><div class="sf-label">Income Level</div><select id="s-inc" onchange="runSim()"><option value="low">Low Income</option><option value="mid" selected>Middle Income</option><option value="high">High Income</option></select></div>
+            <div class="sf-field"><div class="sf-label">Chennai Area</div><select id="s-area" onchange="runSim()"><option value="1.26">Kodambakkam</option><option value="1.08">Chromepet</option><option value="1.06">Adyar</option><option value="1.05">Sholinganallur</option><option value="1.02">Anna Nagar</option><option value="0.98">T. Nagar</option><option value="0.96">Velachery</option><option value="0.89">Perambur</option><option value="0.89">Tambaram</option><option value="0.69">Porur</option></select></div>
+            <div class="sf-field"><div class="sf-label">House Type</div><select id="s-house" onchange="runSim()"><option value="0.88">Apartment</option><option value="1.03">Row House</option><option value="1.10" selected>Independent House</option><option value="1.06">Villa</option></select></div>
+            <div class="sf-field"><div class="sf-label">Members <span class="sf-lval" id="lv-mem">3</span></div><input type="range" min="1" max="6" value="3" oninput="document.getElementById('lv-mem').textContent=this.value;runSim()"></div>
+          </div>
+          <div class="sf-group">
+            <div class="sf-title">Time & Season</div>
+            <div class="sf-field"><div class="sf-label">Month</div><select id="s-month" onchange="runSim()"><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5" selected>May (Peak)</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select></div>
+            <div class="sf-field"><div class="sf-label">Day Type</div><select id="s-day" onchange="runSim()"><option value="1.0">Weekday</option><option value="1.16">Weekend</option></select></div>
+          </div>
+        </div>
+        <div class="result-display">
+          <div class="rd-label">Predicted Daily Consumption</div>
+          <div class="rd-val" id="rd-val">0.0</div>
+          <div class="rd-unit">kWh / day — Chennai</div>
+          <div class="rd-bar-wrap"><div class="rd-bar" id="rd-bar" style="width:0%"></div></div>
+          <div class="rd-rows">
+            <div class="rd-row"><span class="rd-row-label">Monthly estimate</span><span class="rd-row-val" id="rd-mon">—</span></div>
+            <div class="rd-row"><span class="rd-row-label">Yearly estimate</span><span class="rd-row-val" id="rd-yr">—</span></div>
+            <div class="rd-row"><span class="rd-row-label">vs Chennai avg (8.4)</span><span class="rd-row-val" id="rd-cmp">—</span></div>
+            <div class="rd-row"><span class="rd-row-label">Est. monthly bill (₹8/kWh)</span><span class="rd-row-val" id="rd-bill">—</span></div>
+          </div>
+          <div class="rd-tier" id="rd-tier"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PAGE 6: ML MODEL -->
+    <div class="page" id="p6">
+      <div class="pg-header">
+        <div class="pg-title-row">
+          <div class="pg-eyebrow">Machine Learning</div>
+          <h1 class="pg-title">Linear Regression <em>Model</em></h1>
+          <div class="pg-desc">Trained on 50,510 Chennai samples, tested on 12,628. Predicts daily electricity consumption from 5 features including area, income, house type, members, and day type.</div>
+        </div>
+        <div class="pg-meta"><span class="pg-tag">Linear Regression</span><span class="pg-tag">80/20 split</span><span class="pg-tag">R²=0.35</span><span class="pg-tag">RMSE=4.45</span></div>
+      </div>
+      <div class="metric-strip">
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--y)"></div>R² Score</div><div class="mc-val" style="color:var(--y)">0.35</div><div class="mc-sub">35% variance explained</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--g)"></div>RMSE</div><div class="mc-val" style="color:var(--g)">4.45<span style="font-size:1.1rem"> kWh</span></div><div class="mc-sub">avg prediction error</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--b)"></div>Training Size</div><div class="mc-val" style="color:var(--b)">50.5<span style="font-size:1.1rem">K</span></div><div class="mc-sub">80% of 63,138 rows</div></div>
+        <div class="mc"><div class="mc-label"><div class="mc-dot" style="background:var(--r)"></div>Test Size</div><div class="mc-val" style="color:var(--r)">12.6<span style="font-size:1.1rem">K</span></div><div class="mc-sub">20% of dataset</div></div>
+      </div>
+      <div class="g21" style="margin-bottom:1.2rem">
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Predicted vs Actual (Test Sample)</div><div class="card-sub">Points near diagonal = good predictions; spread = untracked factors</div></div><span class="card-badge badge-y">scatter</span></div>
+          <div class="cw" style="height:260px"><canvas id="ml-scatter"></canvas></div>
+        </div>
+        <div class="card">
+          <div class="card-header"><div><div class="card-title">Model Comparison</div><div class="card-sub">Linear vs tree-based alternatives</div></div></div>
+          <div style="display:flex;flex-direction:column;gap:1rem;margin-top:0.5rem" id="model-bars"></div>
+          <div style="padding:0.9rem 1rem;background:var(--s2);border-radius:8px;font-size:11px;color:var(--muted2);font-weight:500;line-height:1.8;margin-top:1rem;border:1px solid var(--border)">
+            Upgrading to <strong style="color:var(--g)">Random Forest</strong> or <strong style="color:var(--b)">Gradient Boosting</strong> could push R² to ~75–80% by capturing non-linear interactions between income, season, and household size in Chennai's climate.
+          </div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Feature Importances — Absolute Coefficients</div><div class="card-sub">Income level has by far the largest impact on predicted consumption</div></div><span class="card-badge badge-p">coefficients</span></div>
+        <div class="cw" style="height:170px"><canvas id="ml-feat"></canvas></div>
+      </div>
+    </div>
+
+  </div><!-- /pages -->
+</div><!-- /main -->
+</div><!-- /app -->
+
+<script>
+// ── THEME ──────────────────────────────────────────────────────────────
+let isDark=true;
+function toggleTheme(){
+  isDark=!isDark;
+  document.documentElement.setAttribute('data-theme',isDark?'dark':'light');
+  document.getElementById('tt-icon').textContent=isDark?'🌙':'☀️';
+  document.getElementById('tt-label').textContent=isDark?'Dark':'Light';
+  rebuildCharts();
+}
+function getThemeColors(){
+  return isDark?{
+    gc:'rgba(255,255,255,0.05)',tc:'#4e5a6e',
+    y:'#f4be45',g:'#2dd4a0',b:'#5bb8f5',r:'#f06470',p:'#a78bfa',
+    cardBg:'#0e1420',tooltipBg:'#141c2a',
+    tooltipTitle:'#eceae2',tooltipBody:'#7a8698'
+  }:{
+    gc:'rgba(0,0,0,0.06)',tc:'#9aa3b2',
+    y:'#d4960a',g:'#0f9b72',b:'#1a7fc4',r:'#d63346',p:'#7c5cca',
+    cardBg:'#ffffff',tooltipBg:'#f0f2f5',
+    tooltipTitle:'#1a1f2e',tooltipBody:'#5a6478'
+  };
+}
+
+// ── DATA ───────────────────────────────────────────────────────────────
+// Jan2025–Feb2026 (14 months), Chennai climate
+const LABELS14=['Jan\n\'25','Feb\n\'25','Mar\n\'25','Apr\n\'25','May\n\'25','Jun\n\'25','Jul\n\'25','Aug\n\'25','Sep\n\'25','Oct\n\'25','Nov\n\'25','Dec\n\'25','Jan\n\'26','Feb\n\'26'];
+const ALL14=[6.06,7.13,10.29,11.44,11.65,11.10,9.26,9.04,8.06,6.32,6.06,6.23,6.10,7.13];
+const HI14 =[11.9,14.0,20.3,22.5,22.9,21.8,18.2,17.8,15.8,12.4,11.9,12.2,12.0,14.0];
+const MI14 =[5.5, 6.4,  9.3,10.3,10.5,10.0, 8.3, 8.1,  7.3, 5.7, 5.5, 5.6, 5.5, 6.4];
+const LO14 =[2.3, 2.7,  3.9, 4.3, 4.4, 4.2, 3.5, 3.4,  3.1, 2.4, 2.3, 2.3, 2.3, 2.7];
+
+const chartStore={};
+function destroyAll(){Object.values(chartStore).forEach(c=>{try{c.destroy()}catch(e){}});for(const k in chartStore)delete chartStore[k];}
+
+function mkC(id,cfg){
+  const el=document.getElementById(id);if(!el)return;
+  if(chartStore[id]){try{chartStore[id].destroy()}catch(e){}}
+  chartStore[id]=new Chart(el.getContext('2d'),cfg);
+}
+
+function buildCharts(){
+  const C=getThemeColors();
+  const tip={
+    backgroundColor:C.tooltipBg,borderColor:isDark?'rgba(255,255,255,0.1)':'rgba(0,0,0,0.1)',
+    borderWidth:1,titleColor:C.tooltipTitle,bodyColor:C.tooltipBody,
+    padding:12,cornerRadius:8,
+    titleFont:{weight:'700',size:12,family:'Syne,sans-serif'},
+    bodyFont:{size:12,family:'Syne,sans-serif'},
+    callbacks:{label:v=>`  ${v.parsed.y!=null?v.parsed.y.toFixed(2):v.parsed.x?.toFixed(2)} kWh/day`}
+  };
+  const base={
+    responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:tip},
+    scales:{
+      x:{grid:{color:C.gc},ticks:{color:C.tc,font:{size:10,weight:'700',family:'JetBrains Mono,monospace'}}},
+      y:{grid:{color:C.gc},ticks:{color:C.tc,font:{size:10,weight:'700',family:'JetBrains Mono,monospace'}},beginAtZero:true}
+    },
+    animation:{duration:500,easing:'easeOutQuart'}
+  };
+
+  // PAGE 0
+  mkC('ov-monthly',{type:'line',data:{labels:LABELS14,datasets:[{
+    data:ALL14,borderColor:C.y,backgroundColor:C.y+'15',
+    borderWidth:2.5,pointBackgroundColor:C.cardBg,pointBorderColor:C.y,
+    pointBorderWidth:2,pointRadius:4,fill:true,tension:0.42
+  }]},options:base});
+
+  mkC('ov-income',{type:'bar',data:{labels:['Low','Middle','High'],datasets:[{
+    data:[3.21,7.53,14.21],
+    backgroundColor:[C.g,C.b,C.r],borderRadius:8,borderSkipped:false
+  }]},options:{...base,scales:{...base.scales,x:{...base.scales.x,grid:{display:false}}}}});
+
+  // PAGE 1
+  mkC('s-multi',{type:'line',data:{labels:LABELS14,datasets:[
+    {data:ALL14,borderColor:C.y,backgroundColor:'transparent',borderWidth:2.5,pointRadius:4,pointBackgroundColor:C.cardBg,pointBorderColor:C.y,pointBorderWidth:2,tension:0.4},
+    {data:HI14, borderColor:C.r,backgroundColor:'transparent',borderWidth:1.5,pointRadius:3,pointBackgroundColor:C.cardBg,pointBorderColor:C.r,pointBorderWidth:1.5,borderDash:[5,3],tension:0.4},
+    {data:MI14, borderColor:C.b,backgroundColor:'transparent',borderWidth:1.5,pointRadius:3,pointBackgroundColor:C.cardBg,pointBorderColor:C.b,pointBorderWidth:1.5,borderDash:[5,3],tension:0.4},
+    {data:LO14, borderColor:C.g,backgroundColor:'transparent',borderWidth:1.5,pointRadius:3,pointBackgroundColor:C.cardBg,pointBorderColor:C.g,pointBorderWidth:1.5,borderDash:[5,3],tension:0.4},
+  ]},options:base});
+
+  mkC('s-season',{type:'bar',data:{
+    labels:['Summer\n(Mar–Jun)','Monsoon\n(Jul–Sep)','Post-Mon\n(Oct–Nov)','Cool/Win\n(Dec–Feb)'],
+    datasets:[{data:[11.12,8.79,6.19,6.61],backgroundColor:[C.r,C.b,C.g,C.p],borderRadius:8,borderSkipped:false}]
+  },options:{...base,scales:{...base.scales,x:{...base.scales.x,grid:{display:false}}}}});
+
+  // monthly table
+  const mdata=[
+    {m:'May 2025',v:11.65},{m:'Jun 2025',v:11.10},{m:'Apr 2025',v:11.44},
+    {m:'Mar 2025',v:10.29},{m:'Jul 2025',v:9.26},{m:'Aug 2025',v:9.04},
+    {m:'Sep 2025',v:8.06},{m:'Feb 2025',v:7.13},{m:'Feb 2026',v:7.13},
+    {m:'Dec 2025',v:6.23},{m:'Oct 2025',v:6.32},{m:'Jan 2026',v:6.10},
+    {m:'Nov 2025',v:6.06},{m:'Jan 2025',v:6.06}
+  ];
+  mdata.sort((a,b)=>b.v-a.v);
+  const mt=document.getElementById('month-table');
+  if(mt) mt.innerHTML=`<thead><tr><th>#</th><th>Month</th><th>Avg kWh</th><th>vs avg</th></tr></thead><tbody>${
+    mdata.map((r,i)=>{
+      const d=((r.v-8.4)/8.4*100);
+      const col=d>0?C.r:C.g;
+      return`<tr><td style="color:${C.tc};font-family:'JetBrains Mono',monospace">${i+1}</td><td>${r.m}</td><td><div class="bar-cell"><div class="inline-bar"><div class="ib-fill" style="width:${r.v/12*100}%;background:${i<4?C.y:C.b}"></div></div>${r.v}</div></td><td style="color:${col};font-family:'JetBrains Mono',monospace;font-weight:700">${d>0?'+':''}${d.toFixed(1)}%</td></tr>`
+    }).join('')
+  }</tbody>`;
+
+  // PAGE 2
+  mkC('i-monthly',{type:'bar',data:{labels:LABELS14,datasets:[
+    {data:HI14,backgroundColor:C.r+'cc',borderRadius:3,borderSkipped:false},
+    {data:MI14,backgroundColor:C.b+'cc',borderRadius:3,borderSkipped:false},
+    {data:LO14,backgroundColor:C.g+'cc',borderRadius:3,borderSkipped:false},
+  ]},options:base});
+
+  mkC('i-gap',{type:'line',data:{labels:LABELS14,datasets:[{
+    data:HI14.map((h,i)=>parseFloat((h-LO14[i]).toFixed(2))),
+    borderColor:C.y,backgroundColor:C.y+'10',
+    borderWidth:2,fill:true,tension:0.4,
+    pointRadius:3,pointBackgroundColor:C.cardBg,pointBorderColor:C.y,pointBorderWidth:2,
+  }]},options:{...base,plugins:{...base.plugins,tooltip:{...tip,callbacks:{label:v=>`  Gap: ${v.parsed.y.toFixed(1)} kWh`}}}}});
+
+  // appliance list
+  const apps={Low:['Fan','Fridge','TV','LED Lights'],Middle:['Fan','Fridge','TV','LED Lights','AC','Washing Machine'],High:['Fan','Fridge','TV','LED Lights','AC (2+)','Washing Machine','Microwave','Geyser','Dishwasher','Water Purifier']};
+  const appColors={Low:C.g,Middle:C.b,High:C.r};
+  const al=document.getElementById('appliance-list');
+  if(al) al.innerHTML=Object.entries(apps).map(([k,v])=>`
+    <div style="padding:0.7rem 0.9rem;background:var(--s2);border-radius:8px;border:1px solid var(--border)">
+      <div style="font-size:10px;font-family:'JetBrains Mono',monospace;font-weight:600;color:${appColors[k]};letter-spacing:0.1em;text-transform:uppercase;margin-bottom:5px">${k} Income</div>
+      <div style="display:flex;flex-wrap:wrap;gap:4px">${v.map(a=>`<span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:var(--s3);color:var(--muted2)">${a}</span>`).join('')}</div>
+    </div>`).join('');
+
+  // PAGE 3
+  const dayVals=[7.72,7.78,7.85,7.92,8.10,9.42,8.93];
+  mkC('w-days',{type:'bar',data:{
+    labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+    datasets:[{data:dayVals,backgroundColor:(_,ctx)=>ctx.dataIndex>=5?C.y:(isDark?'rgba(91,184,245,0.45)':C.b+'66'),borderRadius:7,borderSkipped:false}]
+  },options:{...base,scales:{...base.scales,x:{...base.scales.x,grid:{display:false}}}}});
+
+  mkC('w-split',{type:'bar',data:{labels:['Low','Middle','High'],datasets:[
+    {label:'Weekday',data:[3.0,7.1,13.4],backgroundColor:C.b+'bb',borderRadius:5,borderSkipped:false},
+    {label:'Weekend',data:[3.5,8.2,15.5],backgroundColor:C.y+'cc',borderRadius:5,borderSkipped:false},
+  ]},options:{...base,plugins:{...base.plugins,legend:{display:false}},scales:{...base.scales,x:{...base.scales.x,grid:{display:false}}}}});
+
+  // Heatmap (Day × 14 months)
+  const hmLabels=['Jan\n\'25','Feb\n\'25','Mar\n\'25','Apr\n\'25','May\n\'25','Jun\n\'25','Jul\n\'25','Aug\n\'25','Sep\n\'25','Oct\n\'25','Nov\n\'25','Dec\n\'25','Jan\n\'26','Feb\n\'26'];
+  const hmData={
+    Mon:[5.8,6.8,9.8,10.9,11.1,10.5,8.8,8.6,7.7,6.0,5.8,5.9,5.8,6.8],
+    Tue:[5.8,6.8,9.9,11.0,11.2,10.6,8.9,8.6,7.7,6.0,5.8,5.9,5.8,6.8],
+    Wed:[5.9,6.9,10.0,11.1,11.3,10.7,8.9,8.7,7.8,6.1,5.8,6.0,5.9,6.9],
+    Thu:[5.9,6.9,10.1,11.2,11.4,10.8,9.0,8.7,7.8,6.1,5.9,6.0,5.9,6.9],
+    Fri:[6.0,7.0,10.2,11.3,11.5,10.9,9.1,8.8,7.9,6.2,5.9,6.1,6.0,7.0],
+    Sat:[7.4,8.6,12.5,13.9,14.2,13.5,11.2,10.8,9.7,7.6,7.2,7.4,7.3,8.6],
+    Sun:[7.0,8.2,12.0,13.3,13.6,12.9,10.7,10.4,9.3,7.3,6.9,7.1,7.0,8.2]
+  };
+  const hmMin=5.5,hmMax=14.5;
+  function hmColor(v){
+    const t=(v-hmMin)/(hmMax-hmMin);
+    if(isDark){const r=Math.round(30+t*220);const g=Math.round(60-t*30);const b=Math.round(80-t*70);return`rgba(${r},${g},${b},${0.4+t*0.6})`;}
+    else{const r=Math.round(255);const g=Math.round(230-t*150);const b=Math.round(200-t*180);return`rgba(${r},${g},${b},${0.5+t*0.5})`;}
+  }
+  const hc=document.getElementById('heatmap-container');
+  if(hc){
+    let html=`<div class="heatmap-grid"><div class="hm-cell"></div>${hmLabels.map(l=>`<div class="hm-header">${l}</div>`).join('')}`;
+    Object.entries(hmData).forEach(([day,vals])=>{
+      html+=`<div class="hm-label">${day}</div>`;
+      vals.forEach(v=>{const t=(v-hmMin)/(hmMax-hmMin);const tc2=t>0.55?(isDark?'#eceae2':'#1a1f2e'):(isDark?'#7a8698':'#5a6478');html+=`<div class="hm-cell" style="background:${hmColor(v)};color:${tc2}" title="${day}: ${v} kWh">${v.toFixed(1)}</div>`});
+    });
+    hc.innerHTML=html+'</div>';
+  }
+
+  // PAGE 4
+  const areaNames=['Kodambakkam','Chromepet','Adyar','Sholinganallur','Anna Nagar','T. Nagar','Velachery','Perambur','Tambaram','Porur'];
+  const areaVals=[10.59,9.11,8.89,8.82,8.60,8.28,8.03,7.50,7.49,5.82];
+  mkC('h-areas',{type:'bar',data:{
+    labels:areaNames,
+    datasets:[{data:areaVals,backgroundColor:(_,ctx)=>ctx.dataIndex===0?C.r:ctx.dataIndex===9?C.g:(isDark?C.b+'99':C.b+'88'),borderRadius:5,borderSkipped:false}]
+  },options:{...base,indexAxis:'y',scales:{
+    x:{grid:{color:C.gc},ticks:{color:C.tc,font:{size:10}},beginAtZero:true},
+    y:{grid:{display:false},ticks:{color:C.tc,font:{size:10,weight:'700'}}}
+  }}});
+
+  const memVals=[5.4,7.5,6.3,7.9,12.1,10.1];
+  mkC('h-members',{type:'bar',data:{labels:['1','2','3','4','5','6'],datasets:[
+    {type:'bar',data:memVals,backgroundColor:(_,ctx)=>ctx.dataIndex===4?C.y:(isDark?C.b+'77':C.b+'55'),borderRadius:6,borderSkipped:false,yAxisID:'y'},
+    {type:'line',data:memVals,borderColor:C.r,borderWidth:2,pointBackgroundColor:C.cardBg,pointBorderColor:C.r,pointBorderWidth:2,pointRadius:4,tension:0.3,fill:false,yAxisID:'y'},
+  ]},options:{...base,scales:{...base.scales,x:{...base.scales.x,grid:{display:false},title:{display:true,text:'Number of Members',color:C.tc,font:{size:10,weight:'700'}}}}}});
+
+  mkC('h-cross',{type:'bar',data:{labels:['Apartment','Row House','Villa','Ind. House'],datasets:[
+    {label:'Low',data:[2.9,3.3,3.2,3.4],backgroundColor:C.g+'bb',borderRadius:4,borderSkipped:false},
+    {label:'Middle',data:[6.7,7.4,7.2,7.5],backgroundColor:C.b+'bb',borderRadius:4,borderSkipped:false},
+    {label:'High',data:[12.8,14.2,13.8,14.5],backgroundColor:C.r+'bb',borderRadius:4,borderSkipped:false},
+  ]},options:{...base,plugins:{...base.plugins,legend:{display:false}},scales:{...base.scales,x:{...base.scales.x,grid:{display:false}}}}});
+
+  // PAGE 6 ML
+  const pts=[];for(let i=0;i<130;i++){const a=Math.random()*25+1;const p=a+(Math.random()-0.5)*5.5;pts.push({x:parseFloat(a.toFixed(2)),y:parseFloat(p.toFixed(2))});}
+  mkC('ml-scatter',{type:'scatter',data:{datasets:[
+    {data:pts,backgroundColor:C.b+'55',pointRadius:4,pointHoverRadius:6},
+    {data:[{x:0,y:0},{x:28,y:28}],type:'line',borderColor:C.y+'66',borderWidth:1.5,borderDash:[5,5],pointRadius:0},
+  ]},options:{...base,plugins:{...base.plugins,tooltip:{...tip,callbacks:{label:v=>`  A:${v.parsed.x.toFixed(1)} P:${v.parsed.y.toFixed(1)}`}}},scales:{
+    x:{grid:{color:C.gc},ticks:{color:C.tc},title:{display:true,text:'Actual (kWh)',color:C.tc},beginAtZero:true},
+    y:{grid:{color:C.gc},ticks:{color:C.tc},title:{display:true,text:'Predicted (kWh)',color:C.tc},beginAtZero:true}
+  }}});
+
+  const models=[{name:'Linear Regression (current)',r2:35,col:C.y},{name:'Random Forest (estimated)',r2:77,col:C.g},{name:'Gradient Boost (estimated)',r2:81,col:C.b}];
+  const mb=document.getElementById('model-bars');
+  if(mb) mb.innerHTML=models.map(m=>`
+    <div class="fi">
+      <div class="fi-top"><span class="fi-name">${m.name}</span><span class="fi-val" style="color:${m.col}">${m.r2}%</span></div>
+      <div class="fi-track"><div class="fi-fill" data-w="${m.r2}%" style="background:${m.col}"></div></div>
+    </div>`).join('');
+  setTimeout(()=>document.querySelectorAll('.fi-fill[data-w]').forEach(b=>{b.style.width=b.dataset.w}),200);
+
+  mkC('ml-feat',{type:'bar',data:{
+    labels:['Income Level','Is Weekend','No. of Members','House Type','Area'],
+    datasets:[{data:[3.54,1.39,0.78,0.12,0.03],backgroundColor:[C.r,C.g,C.b,C.y,C.p],borderRadius:6,borderSkipped:false}]
+  },options:{...base,indexAxis:'y',scales:{
+    x:{grid:{color:C.gc},ticks:{color:C.tc},beginAtZero:true,title:{display:true,text:'Absolute Coefficient',color:C.tc,font:{size:10}}},
+    y:{grid:{display:false},ticks:{color:C.tc,font:{size:10,weight:'700'}}}
+  }}});
+}
+
+function rebuildCharts(){setTimeout(buildCharts,50);}
+buildCharts();
+
+// ── NAVIGATION ─────────────────────────────────────────────────────────
+const pageNames=['Overview','Seasonal Trends','Income Analysis','Weekly Patterns','Area & Housing','Simulator','ML Model'];
+const dots=document.getElementById('tb-dots');
+dots.innerHTML=pageNames.map((_,i)=>`<div class="tb-dot${i===0?' active':''}" onclick="goTo(${i})" title="${pageNames[i]}"></div>`).join('');
+
+function goTo(i){
+  document.querySelectorAll('.page').forEach((p,j)=>p.classList.toggle('active',j===i));
+  document.querySelectorAll('.sb-item').forEach((s,j)=>s.classList.toggle('active',j===i));
+  document.querySelectorAll('.tb-dot').forEach((d,j)=>d.classList.toggle('active',j===i));
+  document.getElementById('tb-cur').textContent=pageNames[i];
+  setTimeout(()=>document.querySelectorAll('.fi-fill[data-w]').forEach(b=>{b.style.width=b.dataset.w}),120);
+  if(i===5)setTimeout(runSim,100);
+}
+
+// ── SIMULATOR ──────────────────────────────────────────────────────────
+// Base rates (kWh/month / 30 = daily base before factors)
+const incBase={low:85/30,mid:195/30,high:370/30};
+const mF={1:0.70,2:0.82,3:1.18,4:1.38,5:1.43,6:1.30,7:1.07,8:1.03,9:0.93,10:0.73,11:0.69,12:0.72};
+function runSim(){
+  const inc=document.getElementById('s-inc')?.value||'mid';
+  const area=parseFloat(document.getElementById('s-area')?.value||1.0);
+  const house=parseFloat(document.getElementById('s-house')?.value||1.0);
+  const mem=parseInt(document.querySelector('#p5 input[type=range]')?.value||3);
+  const month=parseInt(document.getElementById('s-month')?.value||5);
+  const dayF=parseFloat(document.getElementById('s-day')?.value||1.0);
+  const memberF=0.85+mem*0.08;
+  const daily=incBase[inc]*memberF*mF[month]*house*area*dayF;
+  const r=parseFloat(daily.toFixed(1));
+  document.getElementById('rd-val').textContent=r.toFixed(1);
+  document.getElementById('rd-bar').style.width=Math.min(r/25*100,100)+'%';
+  document.getElementById('rd-mon').textContent=(r*30).toFixed(0)+' kWh';
+  document.getElementById('rd-yr').textContent=(r*365).toFixed(0)+' kWh';
+  const d=((r-8.4)/8.4*100);
+  const cmpEl=document.getElementById('rd-cmp');
+  cmpEl.textContent=(d>=0?'+':'')+d.toFixed(1)+'%';
+  cmpEl.style.color=d>20?'#d63346':d<-20?'#0f9b72':'var(--text)';
+  document.getElementById('rd-bill').textContent='₹'+(r*30*8).toFixed(0)+'/mo';
+  const t=document.getElementById('rd-tier');
+  if(r<4){t.style.cssText='background:rgba(45,212,160,0.1);border:1px solid rgba(45,212,160,0.3);color:var(--g)';t.textContent='🟢 Low — Very efficient for Chennai'}
+  else if(r<9){t.style.cssText='background:rgba(91,184,245,0.1);border:1px solid rgba(91,184,245,0.3);color:var(--b)';t.textContent='🔵 Moderate — Near Chennai average'}
+  else if(r<16){t.style.cssText='background:rgba(244,190,69,0.1);border:1px solid rgba(244,190,69,0.3);color:var(--y)';t.textContent='🟡 High — Above Chennai average'}
+  else{t.style.cssText='background:rgba(240,100,112,0.1);border:1px solid rgba(240,100,112,0.3);color:var(--r)';t.textContent='🔴 Very High — Top 15% of households'}
+}
+
+// ── CLOCK ──────────────────────────────────────────────────────────────
+function tick(){document.getElementById('tb-clock').textContent=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit',second:'2-digit',timeZone:'Asia/Kolkata'});}
+setInterval(tick,1000);tick();
+</script>
+</body>
+</html>
